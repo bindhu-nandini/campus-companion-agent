@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campus Companion Agent</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: #f0f4f8; min-height: 100vh; }
+.header { background: #1e3a8a; color: white; padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+.header .logo { width: 36px; height: 36px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.header h1 { font-size: 17px; font-weight: 600; }
+.header p { font-size: 12px; opacity: 0.8; }
+.tabs { display: flex; background: white; border-bottom: 1px solid #e2e8f0; overflow-x: auto; }
+.tab { padding: 12px 18px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; color: #64748b; border-bottom: 2px solid transparent; }
+.tab.active { color: #1e3a8a; border-bottom-color: #1e3a8a; }
+.content { padding: 16px; max-width: 700px; margin: 0 auto; }
+.chat-box { background: white; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
+.messages { height: 340px; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.msg { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; }
+.msg.bot { background: #eff6ff; color: #1e3a8a; align-self: flex-start; border-bottom-left-radius: 4px; }
+.msg.user { background: #1e3a8a; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+.msg.loading { background: #f1f5f9; color: #94a3b8; font-style: italic; }
+.quick-btns { padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 6px; border-top: 1px solid #f1f5f9; }
+.quick-btn { background: #eff6ff; color: #1e3a8a; border: 1px solid #bfdbfe; border-radius: 20px; padding: 5px 12px; font-size: 12px; cursor: pointer; }
+.chat-input { display: flex; padding: 10px; gap: 8px; border-top: 1px solid #e2e8f0; }
+.chat-input input { flex: 1; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 14px; outline: none; }
+.chat-input button { background: #1e3a8a; color: white; border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 14px; }
+.form-card { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; }
+.form-card h2 { font-size: 16px; font-weight: 600; color: #1e293b; margin-bottom: 16px; }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 13px; font-weight: 500; color: #475569; margin-bottom: 5px; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px 12px; font-size: 14px; outline: none; font-family: inherit; }
+.form-group textarea { resize: vertical; min-height: 80px; }
+.submit-btn { background: #1e3a8a; color: white; border: none; border-radius: 8px; padding: 11px 24px; width: 100%; font-size: 14px; cursor: pointer; font-weight: 500; margin-top: 4px; }
+.success-msg { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; color: #15803d; font-size: 14px; margin-top: 12px; display: none; }
+.event-card { background: white; border-radius: 12px; padding: 16px; border: 1px solid #e2e8f0; margin-bottom: 12px; display: flex; gap: 14px; align-items: flex-start; }
+.event-date { background: #1e3a8a; color: white; border-radius: 8px; padding: 8px 10px; text-align: center; min-width: 48px; }
+.event-date .day { font-size: 20px; font-weight: 700; line-height: 1; }
+.event-date .mon { font-size: 11px; opacity: 0.85; }
+.event-info h3 { font-size: 15px; font-weight: 600; color: #1e293b; margin-bottom: 4px; }
+.event-info p { font-size: 13px; color: #64748b; margin-bottom: 6px; }
+.event-tag { display: inline-block; background: #eff6ff; color: #1e3a8a; border-radius: 20px; padding: 2px 10px; font-size: 12px; }
+.status-card { background: white; border-radius: 12px; padding: 16px; border: 1px solid #e2e8f0; margin-bottom: 12px; }
+.status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.status-header h3 { font-size: 14px; font-weight: 600; color: #1e293b; }
+.badge { border-radius: 20px; padding: 3px 10px; font-size: 12px; font-weight: 500; }
+.badge.pending { background: #fefce8; color: #a16207; }
+.badge.approved { background: #f0fdf4; color: #15803d; }
+.badge.rejected { background: #fef2f2; color: #b91c1c; }
+.status-detail { font-size: 13px; color: #64748b; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">🎓</div>
+  <div><h1>Campus Companion Agent</h1><p>AI-powered campus assistant</p></div>
+</div>
+<div class="tabs">
+  <div class="tab active" onclick="showTab('chat',this)">AI Assistant</div>
+  <div class="tab" onclick="showTab('leave',this)">Leave Request</div>
+  <div class="tab" onclick="showTab('events',this)">Events</div>
+  <div class="tab" onclick="showTab('status',this)">My Requests</div>
+</div>
+<div class="content">
+  <div id="tab-chat">
+    <div class="chat-box">
+      <div class="messages" id="messages">
+        <div class="msg bot">Hi! I'm your Campus Companion 👋 I can help with academics, events, leave requests, and career guidance. What do you need?</div>
+      </div>
+      <div class="quick-btns">
+        <span class="quick-btn" onclick="sendQuick('How do I apply for leave?')">Apply for leave</span>
+        <span class="quick-btn" onclick="sendQuick('What events are coming up?')">Upcoming events</span>
+        <span class="quick-btn" onclick="sendQuick('What are the attendance rules?')">Attendance rules</span>
+        <span class="quick-btn" onclick="sendQuick('Career guidance tips')">Career tips</span>
+      </div>
+      <div class="chat-input">
+        <input type="text" id="chatInput" placeholder="Ask me anything..." onkeydown="if(event.key==='Enter')sendMsg()"/>
+        <button onclick="sendMsg()">Send</button>
+      </div>
+    </div>
+  </div>
+  <div id="tab-leave" style="display:none">
+    <div class="form-card">
+      <h2>📋 Leave / Permission Request</h2>
+      <div class="form-group"><label>Student Name</label><input type="text" id="studentName" placeholder="Enter your full name"/></div>
+      <div class="form-group"><label>Roll Number</label><input type="text" id="rollNo" placeholder="e.g. 21CS101"/></div>
+      <div class="form-group"><label>Request Type</label>
+        <select id="reqType">
+          <option>Medical Leave</option>
+          <option>Event Permission (OD)</option>
+          <option>Exam Leave</option>
+          <option>Personal Leave</option>
+          <option>Internship Permission</option>
+        </select>
+      </div>
+      <div class="form-group"><label>From Date</label><input type="date" id="fromDate"/></div>
+      <div class="form-group"><label>To Date</label><input type="date" id="toDate"/></div>
+      <div class="form-group"><label>Reason</label><textarea id="reason" placeholder="Briefly explain your reason..."></textarea></div>
+      <button class="submit-btn" onclick="submitLeave()">Submit Request</button>
+      <div class="success-msg" id="successMsg">✅ Request submitted! Faculty will review within 24 hours. Check "My Requests" for status.</div>
+    </div>
+  </div>
+  <div id="tab-events" style="display:none">
+    <div class="event-card"><div class="event-date"><div class="day">15</div><div class="mon">JUN</div></div><div class="event-info"><h3>Annual Tech Symposium 2026</h3><p>CSE Block, Seminar Hall — 9:00 AM to 5:00 PM</p><span class="event-tag">Technical</span></div></div>
+    <div class="event-card"><div class="event-date"><div class="day">18</div><div class="mon">JUN</div></div><div class="event-info"><h3>Campus Placement Drive — TCS</h3><p>Placement Cell, Block B — 10:00 AM</p><span class="event-tag">Placement</span></div></div>
+    <div class="event-card"><div class="event-date"><div class="day">22</div><div class="mon">JUN</div></div><div class="event-info"><h3>Cultural Fest — Kaleidoscope</h3><p>Open Air Auditorium — All Day</p><span class="event-tag">Cultural</span></div></div>
+    <div class="event-card"><div class="event-date"><div class="day">28</div><div class="mon">JUN</div></div><div class="event-info"><h3>AI & Machine Learning Workshop</h3><p>Computer Lab 3 — 2:00 PM to 6:00 PM</p><span class="event-tag">Workshop</span></div></div>
+  </div>
+  <div id="tab-status" style="display:none">
+    <div class="status-card"><div class="status-header"><h3>Medical Leave — Jun 5 to Jun 6</h3><span class="badge approved">Approved</span></div><div class="status-detail">Submitted Jun 4 · Approved by Dr. Ramesh Kumar</div></div>
+    <div class="status-card"><div class="status-header"><h3>Event OD — Hackathon</h3><span class="badge pending">Pending</span></div><div class="status-detail">Submitted Jun 12 · Awaiting faculty approval</div></div>
+    <div id="dynamic-requests"></div>
+  </div>
+</div>
+<script>
+const ANTHROPIC_API_KEY = "YOUR_API_KEY_HERE";
+function showTab(name,el){document.querySelectorAll('[id^="tab-"]').forEach(t=>t.style.display='none');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.getElementById('tab-'+name).style.display='block';el.classList.add('active');}
+function addMsg(text,type){const msgs=document.getElementById('messages');const div=document.createElement('div');div.className='msg '+type;div.textContent=text;msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;return div;}
+async function sendMsg(){
+  const input=document.getElementById('chatInput');
+  const text=input.value.trim();
+  if(!text)return;
+  input.value='';
+  addMsg(text,'user');
+  const loader=addMsg('Thinking...','loading');
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:300,system:"You are Campus Companion Agent, an AI assistant for college students. Help with academics (min 75% attendance), leave requests, campus events, career guidance. Keep responses short, friendly, 2-4 sentences.",messages:[{role:"user",content:text}]})});
+    const data=await res.json();
+    loader.className='msg bot';
+    loader.textContent=data.content?.[0]?.text||"Sorry, try again.";
+  }catch(e){loader.className='msg bot';loader.textContent="Connection error. Check API key.";}
+}
+function sendQuick(text){document.getElementById('chatInput').value=text;sendMsg();}
+function submitLeave(){
+  const name=document.getElementById('studentName').value.trim();
+  const roll=document.getElementById('rollNo').value.trim();
+  const type=document.getElementById('reqType').value;
+  const from=document.getElementById('fromDate').value;
+  const to=document.getElementById('toDate').value;
+  const reason=document.getElementById('reason').value.trim();
+  if(!name||!roll||!from||!reason){alert('Please fill all fields.');return;}
+  const dr=document.getElementById('dynamic-requests');
+  const card=document.createElement('div');
+  card.className='status-card';
+  card.innerHTML=`<div class="status-header"><h3>${type} — ${from}${to&&to!==from?' to '+to:''}</h3><span class="badge pending">Pending</span></div><div class="status-detail">Submitted just now · Awaiting faculty approval</div>`;
+  dr.prepend(card);
+  document.getElementById('successMsg').style.display='block';
+  document.getElementById('studentName').value='';
+  document.getElementById('rollNo').value='';
+  document.getElementById('reason').value='';
+}
+</script>
+</body>
+</html>
